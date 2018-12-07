@@ -1,0 +1,34 @@
+\set QUIET ON
+\x auto
+\pset pager off
+\set HISTCONTROL ignoredups
+\encoding UTF8
+\set QUIET OFF
+
+\echo Server date : `date '+%Y-%m-%d %H:%M:%S'`'\n'
+
+\echo 'Administrative queries:'
+\echo '  :conninfo\t-- Server connections'
+\echo '  :activity\t-- Server queries'
+\echo '  :transactions\t-- Current transactions'
+\echo '  :waits\t-- Waiting queires'
+\echo '  :locks\t-- Lock info'
+\echo '  :dbsize\t-- Database Size'
+\echo '  :tablesize\t-- Tables Size'
+\echo '  :settings\t-- Server Settings'
+\echo '  :uptime\t-- Server Uptime'
+\echo '  :menu\t\t-- This Menu'
+\echo '  \\h\t\t-- Help with SQL commands'
+\echo '  \\?\t\t-- Help with psql commands\n'
+
+\set conninfo 'SELECT usename, count(*) FROM pg_stat_activity group by usename;'
+\set activity 'SELECT datname, pid, usename, client_addr, client_hostname, state, query FROM pg_stat_activity;'
+\set transactions 'SELECT datname, pid, usename, client_addr, client_hostname, state, query FROM pg_stat_activity WHERE state like ''%transaction%'';'
+\set waits 'SELECT pg_stat_activity.pid, pg_stat_activity.query, pg_stat_activity.waiting, now() - pg_stat_activity.query_start AS \"totaltime\", pg_stat_activity.backend_start FROM pg_stat_activity WHERE pg_stat_activity.query !~ \'%IDLE%\'::text AND pg_stat_activity.waiting = true;'
+\set locks  'SELECT bl.pid AS blocked_pid, a.usename AS blocked_user, kl.pid AS blocking_pid, ka.usename AS blocking_user, a.query AS blocked_statement FROM pg_catalog.pg_locks bl JOIN pg_catalog.pg_stat_activity a ON bl.pid = a.pid JOIN pg_catalog.pg_locks kl JOIN pg_catalog.pg_stat_activity ka ON kl.pid = ka.pid ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid WHERE NOT bl.granted;'
+\set dbsize 'SELECT datname, pg_size_pretty(pg_database_size(datname)) db_size FROM pg_database ORDER BY db_size;'
+\set tablesize 'SELECT nspname || \'.\' || relname AS \"relation\", pg_size_pretty(pg_relation_size(C.oid)) AS "size" FROM pg_class C LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace) WHERE nspname NOT IN (\'pg_catalog\', \'information_schema\') ORDER BY pg_relation_size(C.oid) DESC LIMIT 40;'
+\set settings 'SELECT name, setting, unit, context FROM pg_settings;'
+\set uptime 'SELECT now() - pg_postmaster_start_time() AS uptime;'
+\set menu '\\i /etc/postgresql-common/psqlrc'
+
